@@ -14,11 +14,17 @@ Parameters:
     Description: Bucket name where data is persisted
     Type: String
     MinLength: 1
+  EnvironmentName:
+    Description: The name of the environment
+    Type: String
+    Default: dev
 Resources:
   EksServiceRole:
     Type: 'AWS::IAM::Role'
     Properties:
-      RoleName: hindsight-service-role
+      RoleName: !Sub
+        - "hindsight-service-role-${EnvironmentName}"
+        - EnvironmentName: !Ref "EnvironmentName"
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -35,7 +41,9 @@ Resources:
     Type: 'AWS::IAM::Role'
     Properties:
       Path: "/"
-      RoleName: hindsight-user-role
+      RoleName: !Sub
+        - "hindsight-user-role-${EnvironmentName}"
+        - EnvironmentName: !Ref "EnvironmentName"
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -50,7 +58,9 @@ Resources:
   EksCluster:
     Type: 'AWS::EKS::Cluster'
     Properties:
-      Name: hindsight-kubernetes
+      Name: !Sub
+        - "hindsight-kubernetes-${EnvironmentName}"
+        - EnvironmentName: !Ref "EnvironmentName"
       ResourcesVpcConfig:
         SecurityGroupIds:
           - !Ref EksControlPlaneSg
@@ -64,7 +74,9 @@ Resources:
   EksWorkerRole:
     Type: 'AWS::IAM::Role'
     Properties:
-      RoleName: hindsight-worker-role
+      RoleName: !Sub
+        - "hindsight-worker-role-${EnvironmentName}"
+        - EnvironmentName: !Ref "EnvironmentName"
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -82,7 +94,9 @@ Resources:
   EksWorkerGroup:
     Type: 'AWS::EKS::Nodegroup'
     Properties:
-      ClusterName: hindsight-kubernetes
+      ClusterName: !Sub
+        - "hindsight-kubernetes-${EnvironmentName}"
+        - EnvironmentName: !Ref "EnvironmentName"
       InstanceTypes:
         - t2.large
       NodegroupName: hindsight-worker-group
@@ -90,7 +104,7 @@ Resources:
         - EksWorkerRole
         - Arn
       ScalingConfig:
-        DesiredSize: 4
+        DesiredSize: 5
         MinSize: 3
         MaxSize: 7
       Subnets:
@@ -126,7 +140,10 @@ Resources:
   EksControlPlaneSg:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
-      GroupName: hindsight-control-plane-sg
+      GroupName: !Sub
+        - "hindsight-control-plane-sg-${EnvironmentName}"
+        - EnvironmentName: !Ref "EnvironmentName"
+
       GroupDescription: Cluster communication with worker nodes
       VpcId: !Ref Vpc
   Vpc:
@@ -138,7 +155,9 @@ Resources:
   VpcSg:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
-      GroupName: hindsight-vpc-sg
+      GroupName: !Sub
+        - "hindsight-vpc-sg-${EnvironmentName}"
+        - EnvironmentName: !Ref "EnvironmentName"
       GroupDescription: VPCSecured
       VpcId: !Ref Vpc
       SecurityGroupIngress:
@@ -211,7 +230,10 @@ Resources:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
-      BucketName: !Ref DataBucketName
+      BucketName: !Sub
+        - "${BucketName}-${EnvironmentName}"
+        - BucketName: !Ref "DataBucketName"
+          EnvironmentName: !Ref "EnvironmentName"
   DataBucketPolicy:
     Type: 'AWS::S3::BucketPolicy'
     Properties:

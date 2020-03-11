@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -eo pipefail
+
 function deploy {
     local -r bucket="${1:?Bucket name required.}"
     shift
