@@ -23,8 +23,8 @@ Resources:
     Type: 'AWS::IAM::Role'
     Properties:
       RoleName: !Sub
-        - "hindsight-service-role-${EnvironmentName}"
-        - EnvironmentName: !Ref "EnvironmentName"
+        - 'hindsight-service-role-${EnvironmentName}'
+        - EnvironmentName: !Ref EnvironmentName
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -40,27 +40,27 @@ Resources:
   EksUserRole:
     Type: 'AWS::IAM::Role'
     Properties:
-      Path: "/"
+      Path: '/'
       RoleName: !Sub
-        - "hindsight-user-role-${EnvironmentName}"
-        - EnvironmentName: !Ref "EnvironmentName"
+        - 'hindsight-user-role-${EnvironmentName}'
+        - EnvironmentName: !Ref EnvironmentName
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
           - Effect: Allow
             Principal:
               AWS: !Join
-                - ""
-                - - "arn:aws:iam::"
-                  - !Ref "AWS::AccountId"
-                  - ":root"
-            Action: "sts:AssumeRole"
+                - ''
+                - - 'arn:aws:iam::'
+                  - !Ref 'AWS::AccountId'
+                  - ':root'
+            Action: 'sts:AssumeRole'
   EksCluster:
     Type: 'AWS::EKS::Cluster'
     Properties:
       Name: !Sub
-        - "hindsight-kubernetes-${EnvironmentName}"
-        - EnvironmentName: !Ref "EnvironmentName"
+        - 'hindsight-kubernetes-${EnvironmentName}'
+        - EnvironmentName: !Ref EnvironmentName
       ResourcesVpcConfig:
         SecurityGroupIds:
           - !Ref EksControlPlaneSg
@@ -75,8 +75,8 @@ Resources:
     Type: 'AWS::IAM::Role'
     Properties:
       RoleName: !Sub
-        - "hindsight-worker-role-${EnvironmentName}"
-        - EnvironmentName: !Ref "EnvironmentName"
+        - 'hindsight-worker-role-${EnvironmentName}'
+        - EnvironmentName: !Ref EnvironmentName
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -95,11 +95,13 @@ Resources:
     Type: 'AWS::EKS::Nodegroup'
     Properties:
       ClusterName: !Sub
-        - "hindsight-kubernetes-${EnvironmentName}"
-        - EnvironmentName: !Ref "EnvironmentName"
+        - 'hindsight-kubernetes-${EnvironmentName}'
+        - EnvironmentName: !Ref EnvironmentName
       InstanceTypes:
         - t2.large
-      NodegroupName: hindsight-worker-group
+      NodegroupName: !Sub
+        - 'hindsight-worker-group-${EnvironmentName}'
+        - EnvironmentName: !Ref EnvironmentName
       NodeRole: !GetAtt
         - EksWorkerRole
         - Arn
@@ -141,8 +143,8 @@ Resources:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
       GroupName: !Sub
-        - "hindsight-control-plane-sg-${EnvironmentName}"
-        - EnvironmentName: !Ref "EnvironmentName"
+        - 'hindsight-control-plane-sg-${EnvironmentName}'
+        - EnvironmentName: !Ref EnvironmentName
 
       GroupDescription: Cluster communication with worker nodes
       VpcId: !Ref Vpc
@@ -156,8 +158,8 @@ Resources:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
       GroupName: !Sub
-        - "hindsight-vpc-sg-${EnvironmentName}"
-        - EnvironmentName: !Ref "EnvironmentName"
+        - 'hindsight-vpc-sg-${EnvironmentName}'
+        - EnvironmentName: !Ref EnvironmentName
       GroupDescription: VPCSecured
       VpcId: !Ref Vpc
       SecurityGroupIngress:
@@ -230,10 +232,7 @@ Resources:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
-      BucketName: !Sub
-        - "${BucketName}-${EnvironmentName}"
-        - BucketName: !Ref "DataBucketName"
-          EnvironmentName: !Ref "EnvironmentName"
+      BucketName: 'ade-presto-bucket'
   DataBucketPolicy:
     Type: 'AWS::S3::BucketPolicy'
     Properties:
@@ -280,10 +279,25 @@ Resources:
     Type: 'AWS::ElastiCache::SubnetGroup'
     Properties:
       Description: Subnet for Redis
-      CacheSubnetGroupName: RedisSubnetGroup
+      CacheSubnetGroupName: !Sub
+        - 'RedisSubnetGroup-${EnvironmentName}'
+        - EnvironmentName: !Ref EnvironmentName
       SubnetIds:
         - !Ref VpcSubnet1
         - !Ref VpcSubnet2
+  MetastorePassword:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: "MetastoreInfoDev"
+      Description: !Sub
+        - 'Secret for ${EnvironmentName} metastore database'
+        - EnvironmentName: !Ref EnvironmentName
+      SecretString: !Sub
+        - '{"username":"${DbUsername}","password":"${DbPassword}", "endpoint": "${EndpointAddress}", "bucket": "${BucketName}"}'
+        - DbUsername: !Ref DbUsername
+          DbPassword: !Ref DbPassword
+          EndpointAddress: !GetAtt PostgresInstance.Endpoint.Address
+          BucketName: !Ref DataBucket
 Outputs:
   Postgres:
     Description: Postgres instance address
