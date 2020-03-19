@@ -234,8 +234,8 @@ Resources:
               SSEAlgorithm: AES256
       BucketName: !Sub
         - '${BucketPrefix}-${EnvironmentName}'
-        - BucketPrefix: !Ref 'DataBucketPrefix'
-          EnvironmentName: !Ref 'EnvironmentName'
+        - BucketPrefix: !Ref DataBucketPrefix
+          EnvironmentName: !Ref EnvironmentName
   DataBucketPolicy:
     Type: 'AWS::S3::BucketPolicy'
     Properties:
@@ -288,12 +288,12 @@ Resources:
       SubnetIds:
         - !Ref VpcSubnet1
         - !Ref VpcSubnet2
-  MetastorePassword:
+  MetastoreInfo:
     Type: AWS::SecretsManager::Secret
     Properties:
       Name: !Sub
         - 'MetastoreInfo-${EnvironmentName}'
-        - EnvironmentName: !Ref 'EnvironmentName'
+        - EnvironmentName: !Ref EnvironmentName
       Description: !Sub
         - 'Secret for ${EnvironmentName} metastore database'
         - EnvironmentName: !Ref EnvironmentName
@@ -303,6 +303,18 @@ Resources:
           DbPassword: !Ref DbPassword
           EndpointAddress: !GetAtt PostgresInstance.Endpoint.Address
           BucketName: !Ref DataBucket
+  RedisInfo:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub
+        - 'RedisInfo-${EnvironmentName}'
+        - EnvironmentName: !Ref EnvironmentName
+      Description: !Sub
+        - 'Secret for ${EnvironmentName} Redis'
+        - EnvironmentName: !Ref EnvironmentName
+      SecretString: !Sub
+        - '{"endpoint":"${EndpointAddress}"}'
+        - EndpointAddress: !GetAtt RedisInstance.RedisEndpoint.Address
 Outputs:
   Postgres:
     Description: Postgres instance address
