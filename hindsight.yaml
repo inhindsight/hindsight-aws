@@ -10,7 +10,7 @@ Parameters:
     MinLength: 8
     MaxLength: 128
     Default: 5bcfd3fb5cba35da5f1be3c347bc
-  DataBucketName:
+  DataBucketPrefix:
     Description: Bucket name where data is persisted
     Type: String
     MinLength: 1
@@ -232,7 +232,10 @@ Resources:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
-      BucketName: 'ade-presto-bucket'
+      BucketName: !Sub
+        - '${BucketPrefix}-${EnvironmentName}'
+        - BucketPrefix: !Ref 'DataBucketPrefix'
+          EnvironmentName: !Ref 'EnvironmentName'
   DataBucketPolicy:
     Type: 'AWS::S3::BucketPolicy'
     Properties:
@@ -288,7 +291,9 @@ Resources:
   MetastorePassword:
     Type: AWS::SecretsManager::Secret
     Properties:
-      Name: "MetastoreInfoDev"
+      Name: !Sub
+        - 'MetastoreInfo-${EnvironmentName}'
+        - EnvironmentName: !Ref 'EnvironmentName'
       Description: !Sub
         - 'Secret for ${EnvironmentName} metastore database'
         - EnvironmentName: !Ref EnvironmentName

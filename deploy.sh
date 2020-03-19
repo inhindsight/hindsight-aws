@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 
-set -xeo pipefail
+set -eo pipefail
 
 function deploy {
 
     local -r password=$(openssl rand 24 -hex)
 
     aws cloudformation deploy \
-        --stack-name=${STACK_NAME} \
+        --stack-name=${STACK_PREFIX}-${ENVIRONMENT_NAME} \
         --template-file hindsight.yaml \
         --capabilities CAPABILITY_NAMED_IAM \
         --parameter-overrides \
-            DataBucketName=${BUCKET_NAME} \
+            DataBucketPrefix=${BUCKET_PREFIX} \
             EnvironmentName=${ENVIRONMENT_NAME} \
             DbPassword=${password} \
         "${@}"
@@ -21,7 +21,7 @@ function get_output {
     local -r key="${1}"
 
     aws cloudformation describe-stacks \
-        | jq -r ".Stacks[] | select(.StackName == \"${STACK_NAME}\") | .Outputs[] | select(.OutputKey == \"${key}\") | .OutputValue"
+        | jq -r ".Stacks[] | select(.StackName == \"${STACK_PREFIX}-${ENVIRONMENT_NAME}\") | .Outputs[] | select(.OutputKey == \"${key}\") | .OutputValue"
 }
 
 function iam_mapping {
@@ -36,14 +36,14 @@ function get_kubeconfig {
 }
 
 if [[ $1 == "-h" || $1 == "--help" ]]; then
-    echo "Usage: ./deploy.sh [STACK_NAME] [BUCKET_NAME] [ENVIRONMENT_NAME] [cf_flags]"
+    echo "Usage: ./deploy.sh [STACK_PREFIX] [BUCKET_PREFIX] [ENVIRONMENT_NAME] [cf_flags]"
     exit 0
 fi
 
-declare -r STACK_NAME="${1:?Stack name required.}"
+declare -r STACK_PREFIX="${1:?Stack prefix required.}"
 shift
 
-declare -r BUCKET_NAME="${1:?Bucket name required.}"
+declare -r BUCKET_PREFIX="${1:?Bucket prefix required.}"
 shift
 
 declare -r ENVIRONMENT_NAME="${1:?Environment name required.}"
