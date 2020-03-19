@@ -35,6 +35,13 @@ function get_kubeconfig {
     eksctl utils write-kubeconfig hindsight-kubernetes-${ENVIRONMENT_NAME}
 }
 
+function check_dependencies {
+    type eksctl 1> /dev/null
+    type openssl 1> /dev/null
+    type helm 1> /dev/null
+    type jq 1> /dev/null
+}
+
 if [[ $1 == "-h" || $1 == "--help" ]]; then
     echo "Usage: ./deploy.sh [STACK_PREFIX] [BUCKET_PREFIX] [ENVIRONMENT_NAME] [cf_flags]"
     exit 0
@@ -49,6 +56,7 @@ shift
 declare -r ENVIRONMENT_NAME="${1:?Environment name required.}"
 shift
 
+check_dependencies
 deploy $@
 get_kubeconfig
 iam_mapping

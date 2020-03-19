@@ -11,7 +11,7 @@ Parameters:
     MaxLength: 128
     Default: 5bcfd3fb5cba35da5f1be3c347bc
   DataBucketPrefix:
-    Description: Bucket name where data is persisted
+    Description: Bucket name prefix, this will be suffixed with -EnvironmentName.
     Type: String
     MinLength: 1
   EnvironmentName:
