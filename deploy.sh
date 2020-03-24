@@ -4,7 +4,8 @@ set -eo pipefail
 
 function deploy {
 
-    local -r password=$(openssl rand 24 -hex)
+    local -r db_password=$(openssl rand 24 -hex)
+    local -r graf_password=$(openssl rand 24 -hex)
 
     aws cloudformation deploy \
         --stack-name=${STACK_PREFIX}-${ENVIRONMENT_NAME} \
@@ -13,7 +14,8 @@ function deploy {
         --parameter-overrides \
             DataBucketPrefix=${BUCKET_PREFIX} \
             EnvironmentName=${ENVIRONMENT_NAME} \
-            DbPassword=${password} \
+            DbPassword=${db_password} \
+            GrafanaPassword=${graf_password} \
         "${@}"
 }
 

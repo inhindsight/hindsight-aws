@@ -18,6 +18,12 @@ Parameters:
     Description: The name of the environment
     Type: String
     Default: dev
+  GrafanaPassword:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    MaxLength: 128
+    Default: 70ff9f8573535f9866d745c24303
 Resources:
   EksServiceRole:
     Type: 'AWS::IAM::Role'
@@ -98,7 +104,7 @@ Resources:
         - 'hindsight-kubernetes-${EnvironmentName}'
         - EnvironmentName: !Ref EnvironmentName
       InstanceTypes:
-        - t2.large
+        - t2.xlarge
       NodegroupName: !Sub
         - 'hindsight-worker-group-${EnvironmentName}'
         - EnvironmentName: !Ref EnvironmentName
@@ -106,9 +112,9 @@ Resources:
         - EksWorkerRole
         - Arn
       ScalingConfig:
-        DesiredSize: 5
-        MinSize: 3
-        MaxSize: 7
+        DesiredSize: 3
+        MinSize: 2
+        MaxSize: 5
       Subnets:
         - !Ref VpcSubnet1
         - !Ref VpcSubnet2
@@ -315,6 +321,18 @@ Resources:
       SecretString: !Sub
         - '{"endpoint":"${EndpointAddress}"}'
         - EndpointAddress: !GetAtt RedisInstance.RedisEndpoint.Address
+  GrafanaInfo:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub
+        - 'GrafanaInfo-${EnvironmentName}'
+        - EnvironmentName: !Ref EnvironmentName
+      Description: !Sub
+        - 'Secret for ${EnvironmentName} Grafana'
+        - EnvironmentName: !Ref EnvironmentName
+      SecretString: !Sub
+        - '{"password":"${GrafanaPassword}"}'
+        - GrafanaPassword: !Ref GrafanaPassword
 Outputs:
   Postgres:
     Description: Postgres instance address
