@@ -50,7 +50,7 @@ EOF
 }
 
 function get_kubeconfig {
-    eksctl utils write-kubeconfig hindsight-kubernetes-${ENVIRONMENT_NAME} --kubeconfig="${HOME}/.kube/hindsight_${ENVIRONMENT_NAME}"
+    eksctl utils write-kubeconfig hindsight-kubernetes-${ENVIRONMENT_NAME}
 }
 
 function check_dependencies {
