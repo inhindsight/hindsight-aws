@@ -32,9 +32,14 @@ function iam_mapping {
     local -r node=$(get_output NodeRole)
     local -r user=$(get_output UserRole)
 
-    if [[ $(grep -v "${user}" ~/.aws/config > /dev/null) ]]; then
+    if [[ $(grep -v "${user}" ~/.aws/config) ]]; then
         echo "Adding hindsight eks profile to aws config"
-        echo -e "\n[profile hindsight-${ENVIRONMENT_NAME}]\nrole_arn=${user}\nsource_profile=${PROFILE_NAME}" >> ~/.aws/config
+        cat << EOF >> ~/.aws/config
+
+[profile hindsight-${ENVIRONMENT_NAME}]
+role_arn=${user}
+source_profile=${PROFILE_NAME}
+EOF
     else
         echo "Skipping profile append; hindsight eks profile already present"
     fi
@@ -45,7 +50,7 @@ function iam_mapping {
 }
 
 function get_kubeconfig {
-    eksctl utils write-kubeconfig hindsight-kubernetes-${ENVIRONMENT_NAME} --kubeconfig="${HOME}/.kube/hindsight_${ENVIRONMENT}"
+    eksctl utils write-kubeconfig hindsight-kubernetes-${ENVIRONMENT_NAME} --kubeconfig="${HOME}/.kube/hindsight_${ENVIRONMENT_NAME}"
 }
 
 function check_dependencies {

@@ -104,7 +104,7 @@ Resources:
         - 'hindsight-kubernetes-${EnvironmentName}'
         - EnvironmentName: !Ref EnvironmentName
       InstanceTypes:
-        - t2.large
+        - t2.xlarge
       NodegroupName: !Sub
         - 'hindsight-worker-group-${EnvironmentName}'
         - EnvironmentName: !Ref EnvironmentName
@@ -112,9 +112,9 @@ Resources:
         - EksWorkerRole
         - Arn
       ScalingConfig:
-        DesiredSize: 5
-        MinSize: 3
-        MaxSize: 7
+        DesiredSize: 3
+        MinSize: 2
+        MaxSize: 5
       Subnets:
         - !Ref VpcSubnet1
         - !Ref VpcSubnet2
