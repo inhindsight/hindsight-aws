@@ -22,8 +22,6 @@ function deploy {
 function get_output {
     local -r key="${1}"
 
-    export AWS_PROFILE=${PROFILE_NAME}
-
     aws cloudformation describe-stacks \
         | jq -r ".Stacks[] | select(.StackName == \"${STACK_PREFIX}-${ENVIRONMENT_NAME}\") | .Outputs[] | select(.OutputKey == \"${key}\") | .OutputValue"
 }
@@ -31,20 +29,6 @@ function get_output {
 function iam_mapping {
     local -r node=$(get_output NodeRole)
     local -r user=$(get_output UserRole)
-
-    if [[ $(grep -v "${user}" ~/.aws/config) ]]; then
-        echo "Adding hindsight eks profile to aws config"
-        cat << EOF >> ~/.aws/config
-
-[profile hindsight-${ENVIRONMENT_NAME}]
-role_arn=${user}
-source_profile=${PROFILE_NAME}
-EOF
-    else
-        echo "Skipping profile append; hindsight eks profile already present"
-    fi
-
-    export AWS_PROFILE="hindsight-${ENVIRONMENT_NAME}"
 
     helm template aws ./helm --set aws.role.node="${node}",aws.role.user="${user}" | kubectl apply -n kube-system -f -
 }
@@ -61,7 +45,7 @@ function check_dependencies {
 }
 
 if [[ $1 == "-h" || $1 == "--help" ]]; then
-    echo "Usage: ./deploy.sh [STACK_PREFIX] [BUCKET_PREFIX] [ENVIRONMENT_NAME] [PROFILE_NAME] [cf_flags]"
+    echo "Usage: ./deploy.sh [STACK_PREFIX] [BUCKET_PREFIX] [ENVIRONMENT_NAME] [cf_flags]"
     exit 0
 fi
 
@@ -72,9 +56,6 @@ declare -r BUCKET_PREFIX="${1:?Bucket prefix required.}"
 shift
 
 declare -r ENVIRONMENT_NAME="${1:?Environment name required.}"
-shift
-
-declare -r PROFILE_NAME="${1:?AWS user profile name required.}"
 shift
 
 check_dependencies
