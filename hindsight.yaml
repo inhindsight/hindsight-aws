@@ -24,6 +24,10 @@ Parameters:
     MinLength: 8
     MaxLength: 128
     Default: 70ff9f8573535f9866d745c24303
+  FlowLogRetention:
+    Description: The log retention in days for vpc flow logs
+    Type: Number
+    Default: 30
 Resources:
   EksServiceRole:
     Type: 'AWS::IAM::Role'
@@ -151,7 +155,6 @@ Resources:
       GroupName: !Sub
         - 'hindsight-control-plane-sg-${EnvironmentName}'
         - EnvironmentName: !Ref EnvironmentName
-
       GroupDescription: Cluster communication with worker nodes
       VpcId: !Ref Vpc
   Vpc:
@@ -160,6 +163,11 @@ Resources:
       CidrBlock: 10.0.0.0/16
       EnableDnsSupport: 'true'
       EnableDnsHostnames: 'true'
+      Tags:
+        - Key: Name
+          Value: !Sub
+          - 'VPC-${EnvironmentName}'
+          - EnvironmentName: !Ref EnvironmentName
   VpcSg:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
@@ -197,6 +205,43 @@ Resources:
     Properties:
       InternetGatewayId: !Ref VpcGateway
       VpcId: !Ref Vpc
+  VpcFlowLogRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: 'vpc-flow-logs.amazonaws.com'
+          Action: 'sts:AssumeRole'
+      Policies:
+      - PolicyName: 'flowlogs-policy'
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - 'logs:CreateLogStream'
+            - 'logs:PutLogEvents'
+            - 'logs:DescribeLogGroups'
+            - 'logs:DescribeLogStreams'
+            Resource: !GetAtt 'VpcFlowLogGroup.Arn'
+  VpcFlowLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: !Sub
+        - 'VpcFlowLogGroup-${EnvironmentName}'
+        - EnvironmentName: !Ref EnvironmentName
+      RetentionInDays: !Ref FlowLogRetention
+  VpcFlowLogs:
+    Type: AWS::EC2::FlowLog
+    Properties:
+      DeliverLogsPermissionArn: !GetAtt VpcFlowLogRole.Arn
+      LogGroupName: !Ref VpcFlowLogGroup
+      ResourceId: !Ref Vpc
+      ResourceType: VPC
+      TrafficType: ALL
   PostgresInstance:
     Type: 'AWS::RDS::DBInstance'
     Properties:
