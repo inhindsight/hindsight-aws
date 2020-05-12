@@ -1,0 +1,15 @@
+Parameters:
+  BucketName:
+    Type: String
+    MinLength: 1
+Resources:
+  CfTemplateBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: !Ref BucketName
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
