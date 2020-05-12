@@ -25,8 +25,8 @@ Resources:
       DBParameterGroupName: !Ref PostgresParameterGroup
       VPCSecurityGroups:
         - !Ref SecurityGroupId
-      MasterUsername: !Sub '{{resolve:secretsmanager:hindsight-db1-${EnvironmentName}:SecretString:username}}'
-      MasterUserPassword: !Sub '{{resolve:secretsmanager:hindsight-db1-${EnvironmentName}:SecretString:password}}'
+      MasterUsername: !Sub '{{resolve:secretsmanager:hindsight-db-${EnvironmentName}:SecretString:username}}'
+      MasterUserPassword: !Sub '{{resolve:secretsmanager:hindsight-db-${EnvironmentName}:SecretString:password}}'
       Port: 5432
       PubliclyAccessible: false
       StorageType: gp2
@@ -47,7 +47,7 @@ Resources:
   MasterCredential:
     Type: 'AWS::SecretsManager::Secret'
     Properties:
-      Name: !Sub 'hindsight-db1-${EnvironmentName}'
+      Name: !Sub 'hindsight-db-${EnvironmentName}'
       Description: !Sub 'Master credentials for RDS instance in ${EnvironmentName} environment'
       GenerateSecretString:
         SecretStringTemplate: !Sub '{"username": "${MasterUsername}"}'
@@ -57,5 +57,110 @@ Resources:
     Type: 'AWS::SecretsManager::SecretTargetAttachment'
     Properties:
       SecretId: !Ref MasterCredential
+      TargetId: !Ref PostgresInstance
+      TargetType: 'AWS::RDS::DBInstance'
+  AcquireCredential:
+    Type: 'AWS::SecretsManager::Secret'
+    Properties:
+      Name: !Sub 'hindsight-acquire-${EnvironmentName}'
+      Description: !Sub 'Acquire credentials for RDS instance ${EnvironmentName} environment'
+      GenerateSecretString:
+        SecretStringTemplate: '{"username": "service_acquire"}'
+        GenerateStringKey: password
+        ExcludePunctuation: true
+  AcquireCredentialAttachment:
+    Type: 'AWS::SecretsManager::SecretTargetAttachment'
+    Properties:
+      SecretId: !Ref AcquireCredential
+      TargetId: !Ref PostgresInstance
+      TargetType: 'AWS::RDS::DBInstance'
+  BroadcastCredential:
+    Type: 'AWS::SecretsManager::Secret'
+    Properties:
+      Name: !Sub 'hindsight-broadcast-${EnvironmentName}'
+      Description: !Sub 'Broadcast credentials for RDS instance ${EnvironmentName} environment'
+      GenerateSecretString:
+        SecretStringTemplate: '{"username": "service_broadcast"}'
+        GenerateStringKey: password
+        ExcludePunctuation: true
+  BroadcastCredentialAttachment:
+    Type: 'AWS::SecretsManager::SecretTargetAttachment'
+    Properties:
+      SecretId: !Ref BroadcastCredential
+      TargetId: !Ref PostgresInstance
+      TargetType: 'AWS::RDS::DBInstance'
+  GatherCredential:
+    Type: 'AWS::SecretsManager::Secret'
+    Properties:
+      Name: !Sub 'hindsight-gather-${EnvironmentName}'
+      Description: !Sub 'Gather credentials for RDS instance ${EnvironmentName} environment'
+      GenerateSecretString:
+        SecretStringTemplate: '{"username": "service_gather"}'
+        GenerateStringKey: password
+        ExcludePunctuation: true
+  GatherCredentialAttachment:
+    Type: 'AWS::SecretsManager::SecretTargetAttachment'
+    Properties:
+      SecretId: !Ref GatherCredential
+      TargetId: !Ref PostgresInstance
+      TargetType: 'AWS::RDS::DBInstance'
+  OrchestrateCredential:
+    Type: 'AWS::SecretsManager::Secret'
+    Properties:
+      Name: !Sub 'hindsight-orchestrate-${EnvironmentName}'
+      Description: !Sub 'Orchestrate credentials for RDS instance ${EnvironmentName} environment'
+      GenerateSecretString:
+        SecretStringTemplate: '{"username": "service_orchestrate"}'
+        GenerateStringKey: password
+        ExcludePunctuation: true
+  OrchestrateCredentialAttachment:
+    Type: 'AWS::SecretsManager::SecretTargetAttachment'
+    Properties:
+      SecretId: !Ref OrchestrateCredential
+      TargetId: !Ref PostgresInstance
+      TargetType: 'AWS::RDS::DBInstance'
+  PersistCredential:
+    Type: 'AWS::SecretsManager::Secret'
+    Properties:
+      Name: !Sub 'hindsight-persist-${EnvironmentName}'
+      Description: !Sub 'Persist credentials for RDS instance ${EnvironmentName} environment'
+      GenerateSecretString:
+        SecretStringTemplate: '{"username": "service_persist"}'
+        GenerateStringKey: password
+        ExcludePunctuation: true
+  PersistCredentialAttachment:
+    Type: 'AWS::SecretsManager::SecretTargetAttachment'
+    Properties:
+      SecretId: !Ref PersistCredential
+      TargetId: !Ref PostgresInstance
+      TargetType: 'AWS::RDS::DBInstance'
+  ProfileCredential:
+    Type: 'AWS::SecretsManager::Secret'
+    Properties:
+      Name: !Sub 'hindsight-profile-${EnvironmentName}'
+      Description: !Sub 'Profile credentials for RDS instance ${EnvironmentName} environment'
+      GenerateSecretString:
+        SecretStringTemplate: '{"username": "service_profile"}'
+        GenerateStringKey: password
+        ExcludePunctuation: true
+  ProfileCredentialAttachment:
+    Type: 'AWS::SecretsManager::SecretTargetAttachment'
+    Properties:
+      SecretId: !Ref ProfileCredential
+      TargetId: !Ref PostgresInstance
+      TargetType: 'AWS::RDS::DBInstance'
+  ReceiveCredential:
+    Type: 'AWS::SecretsManager::Secret'
+    Properties:
+      Name: !Sub 'hindsight-receive-${EnvironmentName}'
+      Description: !Sub 'Receive credentials for RDS instance ${EnvironmentName} environment'
+      GenerateSecretString:
+        SecretStringTemplate: '{"username": "service_receive"}'
+        GenerateStringKey: password
+        ExcludePunctuation: true
+  ReceiveCredentialAttachment:
+    Type: 'AWS::SecretsManager::SecretTargetAttachment'
+    Properties:
+      SecretId: !Ref ReceiveCredential
       TargetId: !Ref PostgresInstance
       TargetType: 'AWS::RDS::DBInstance'
