@@ -1,0 +1,37 @@
+Parameters:
+  EnvironmentName:
+    Type: String
+  BucketPrefix:
+    Type: String
+  KubernetesWorkerRoleArn:
+    Type: String
+Resources:
+  DataBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      BucketName: !Sub '${BucketPrefix}-${EnvironmentName}'
+  DataBucketPolicy:
+    Type: 'AWS::S3::BucketPolicy'
+    Properties:
+      Bucket: !Ref DataBucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - 's3:DeleteObject'
+              - 's3:DeleteObjectVersion'
+              - 's3:GetObject'
+              - 's3:GetObjectVersion'
+              - 's3:PutObject'
+              - 's3:ListBucket'
+            Effect: Allow
+            Principal:
+              AWS:
+                - !Ref KubernetesWorkerRoleArn
+            Resource:
+              - !Sub 'arn:aws:s3:::${DataBucket}'
+              - !Sub 'arn:aws:s3:::${DataBucket}/*'

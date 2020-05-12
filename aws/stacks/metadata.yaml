@@ -1,0 +1,61 @@
+Parameters:
+  EnvironmentName:
+    Type: String
+  SecurityGroupId:
+    Type: String
+  SubnetId1:
+    Type: String
+  SubnetId2:
+    Type: String
+  MasterUsername:
+    Type: String
+Resources:
+  PostgresInstance:
+    Type: 'AWS::RDS::DBInstance'
+    Properties:
+      AllocatedStorage: 100
+      BackupRetentionPeriod: 7
+      DBInstanceClass: db.t3.medium
+      DBName: metastore
+      Engine: postgres
+      EngineVersion: 10
+      MultiAZ: 'true'
+      StorageEncrypted: 'true'
+      DBSubnetGroupName: !Ref PostgresSubnetGroup
+      DBParameterGroupName: !Ref PostgresParameterGroup
+      VPCSecurityGroups:
+        - !Ref SecurityGroupId
+      MasterUsername: !Sub '{{resolve:secretsmanager:hindsight-db1-${EnvironmentName}:SecretString:username}}'
+      MasterUserPassword: !Sub '{{resolve:secretsmanager:hindsight-db1-${EnvironmentName}:SecretString:password}}'
+      Port: 5432
+      PubliclyAccessible: false
+      StorageType: gp2
+  PostgresSubnetGroup:
+    Type: 'AWS::RDS::DBSubnetGroup'
+    Properties:
+      DBSubnetGroupDescription: PostgresSubnet
+      SubnetIds:
+        - !Ref SubnetId1
+        - !Ref SubnetId2
+  PostgresParameterGroup:
+    Type: 'AWS::RDS::DBParameterGroup'
+    Properties:
+      Description: Encrypt RDS connections
+      Family: postgres10
+      Parameters:
+        rds.force_ssl: true
+  MasterCredential:
+    Type: 'AWS::SecretsManager::Secret'
+    Properties:
+      Name: !Sub 'hindsight-db1-${EnvironmentName}'
+      Description: !Sub 'Master credentials for RDS instance in ${EnvironmentName} environment'
+      GenerateSecretString:
+        SecretStringTemplate: !Sub '{"username": "${MasterUsername}"}'
+        GenerateStringKey: password
+        ExcludePunctuation: true
+  PostgresMasterAttachment:
+    Type: 'AWS::SecretsManager::SecretTargetAttachment'
+    Properties:
+      SecretId: !Ref MasterCredential
+      TargetId: !Ref PostgresInstance
+      TargetType: 'AWS::RDS::DBInstance'

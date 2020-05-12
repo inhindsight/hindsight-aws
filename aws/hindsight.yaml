@@ -1,0 +1,59 @@
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: dev
+  DataBucketPrefix:
+    Description: Bucket name prefix, this will be suffixed with -EnvironmentName.
+    Type: String
+    MinLength: 1
+  FlowLogRetention:
+    Description: Retention in days for VPC flow logs
+    Type: Number
+    Default: 30
+  MasterDbUsername:
+    Description: Master username for metadata RDS instance
+    Type: String
+    NoEcho: true
+    Default: postgres
+Resources:
+  NetworkStack:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL: ./stacks/network.yaml
+      Parameters:
+        EnvironmentName: !Ref EnvironmentName
+        FlowLogRetention: !Ref FlowLogRetention
+  KubeStack:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL: ./stacks/kubernetes.yaml
+      Parameters:
+        EnvironmentName: !Ref EnvironmentName
+        VpcId: !GetAtt ['NetworkStack', 'Outputs.VpcId']
+        SubnetId1: !GetAtt ['NetworkStack', 'Outputs.SubnetId1']
+        SubnetId2: !GetAtt ['NetworkStack', 'Outputs.SubnetId2']
+  DataStack:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL: ./stacks/data.yaml
+      Parameters:
+        EnvironmentName: !Ref EnvironmentName
+        BucketPrefix: !Ref DataBucketPrefix
+        KubernetesWorkerRoleArn: !GetAtt ['KubeStack', 'Outputs.WorkerRoleArn']
+  MetadataStack:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL: ./stacks/metadata.yaml
+      Parameters:
+        EnvironmentName: !Ref EnvironmentName
+        SecurityGroupId: !GetAtt ['NetworkStack', 'Outputs.SecurityGroupId']
+        SubnetId1: !GetAtt ['NetworkStack', 'Outputs.SubnetId1']
+        SubnetId2: !GetAtt ['NetworkStack', 'Outputs.SubnetId2']
+        MasterUsername: !Ref MasterDbUsername
+Outputs:
+  KubeNodeRole:
+    Description: Kubernetes worker node role ARN
+    Value: !GetAtt ['KubeStack', 'Outputs.WorkerRoleArn']
+  KubeUserRole:
+    Description: Kubernetes user role ARN
+    Value: !GetAtt ['KubeStack', 'Outputs.UserRoleArn']

@@ -1,0 +1,122 @@
+Parameters:
+  EnvironmentName:
+    Type: String
+  FlowLogRetention:
+    Type: Number
+Resources:
+  VpcRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: Public Subnets
+        - Key: Network
+          Value: Public
+  VpcGatewayRoute:
+    DependsOn: VpcGatewayAttachment
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref VpcRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref VpcGateway
+  VpcSubnet1Rta:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref VpcSubnet1
+      RouteTableId: !Ref VpcRouteTable
+  VpcSubnet2Rta:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref VpcSubnet2
+      RouteTableId: !Ref VpcRouteTable
+  Vpc:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+      Tags:
+        - Key: Name
+          Value: !Sub 'VPC-${EnvironmentName}'
+  VpcSg:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupName: !Sub 'hindsight-vpc-sg-${EnvironmentName}'
+      GroupDescription: VPCSecured
+      VpcId: !Ref Vpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: 0.0.0.0/0
+  VpcSubnet1:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      AvailabilityZone: us-east-2a
+      CidrBlock: 10.0.0.0/24
+      MapPublicIpOnLaunch: True
+      VpcId: !Ref Vpc
+  VpcSubnet2:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      AvailabilityZone: us-east-2b
+      CidrBlock: 10.0.8.0/24
+      MapPublicIpOnLaunch: True
+      VpcId: !Ref Vpc
+  VpcGateway:
+    Type: 'AWS::EC2::InternetGateway'
+  VpcGatewayAttachment:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      InternetGatewayId: !Ref VpcGateway
+      VpcId: !Ref Vpc
+  VpcFlowLogRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: 'vpc-flow-logs.amazonaws.com'
+          Action: 'sts:AssumeRole'
+      Policies:
+      - PolicyName: 'flowlogs-policy'
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - 'logs:CreateLogStream'
+            - 'logs:PutLogEvents'
+            - 'logs:DescribeLogGroups'
+            - 'logs:DescribeLogStreams'
+            Resource: !GetAtt VpcFlowLogGroup.Arn
+  VpcFlowLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: !Sub 'VpcFlowLogGroup-${EnvironmentName}'
+      RetentionInDays: !Ref FlowLogRetention
+  VpcFlowLogs:
+    Type: AWS::EC2::FlowLog
+    Properties:
+      DeliverLogsPermissionArn: !GetAtt VpcFlowLogRole.Arn
+      LogGroupName: !Ref VpcFlowLogGroup
+      ResourceId: !Ref Vpc
+      ResourceType: VPC
+      TrafficType: ALL
+Outputs:
+  VpcId:
+    Value: !Ref Vpc
+  SecurityGroupId:
+    Value: !Ref VpcSg
+  SubnetId1:
+    Value: !Ref VpcSubnet1
+  SubnetId2:
+    Value: !Ref VpcSubnet2

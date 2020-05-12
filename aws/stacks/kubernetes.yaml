@@ -1,0 +1,95 @@
+Parameters:
+  EnvironmentName:
+    Type: String
+  VpcId:
+    Type: String
+  SubnetId1:
+    Type: String
+  SubnetId2:
+    Type: String
+Resources:
+  Kubernetes:
+    Type: 'AWS::EKS::Cluster'
+    Properties:
+      Name: !Sub 'hindsight-kubernetes-${EnvironmentName}'
+      ResourcesVpcConfig:
+        SecurityGroupIds:
+          - !Ref KubernetesSg
+        SubnetIds:
+          - !Ref SubnetId1
+          - !Ref SubnetId2
+      RoleArn: !GetAtt KubernetesServiceRole.Arn
+      Version: 1.14
+  KubernetesWorkers:
+    Type: 'AWS::EKS::Nodegroup'
+    DependsOn: Kubernetes
+    Properties:
+      ClusterName: !Sub 'hindsight-kubernetes-${EnvironmentName}'
+      InstanceTypes:
+        - t2.xlarge
+      NodegroupName: !Sub 'hindsight-worker-group-${EnvironmentName}'
+      NodeRole: !GetAtt KubernetesWorkerRole.Arn
+      ScalingConfig:
+        DesiredSize: 3
+        MinSize: 2
+        MaxSize: 5
+      Subnets:
+        - !Ref SubnetId1
+        - !Ref SubnetId2
+  KubernetesSg:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupName: !Sub 'hindsight-kubernetes-sg-${EnvironmentName}'
+      GroupDescription: Cluster communication with worker nodes
+      VpcId: !Ref VpcId
+  KubernetesServiceRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: !Sub 'hindsight-kubernetes-service-role-${EnvironmentName}'
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - eks.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AmazonEKSServicePolicy'
+        - 'arn:aws:iam::aws:policy/AmazonEKSClusterPolicy'
+  KubernetesWorkerRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: !Sub 'hindsight-worker-role-${EnvironmentName}'
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy'
+        - 'arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly'
+        - 'arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy'
+        - 'arn:aws:iam::aws:policy/AmazonS3FullAccess'
+  KubernetesUserRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      Path: '/'
+      RoleName: !Sub 'hindsight-kubernetes-user-role-${EnvironmentName}'
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: 'sts:AssumeRole'
+Outputs:
+  WorkerRoleArn:
+    Value: !GetAtt KubernetesWorkerRole.Arn
+  UserRoleArn:
+    Value: !GetAtt KubernetesUserRole.Arn
